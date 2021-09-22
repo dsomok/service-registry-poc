@@ -1,0 +1,50 @@
+version: "3.9"
+services:
+
+  service-registry:
+    build: ./ServiceRegistry
+    container_name: service-registry
+    ports:
+      - "5000:80"
+    environment:
+      CONNECTIONSTRINGS__CONSUL: "http://consul-server:8500"
+    networks:
+      - service-registry
+
+  exporter:
+    build: ./Exporter
+    container_name: exporter
+    ports:
+      - "5001:80"
+    environment:
+      SERVICEREGISTRY: "http://service-registry"
+      EXPORTER: "http://exporter"
+    networks:
+      - service-registry
+
+  ## CONSUL
+
+  consul-server:
+    image: consul
+    container_name: consul-server
+    command: agent -bootstrap-expect=1
+    volumes:
+      - "./consul-server-config.json:/consul/config/server.json:ro"
+    ports:
+      - "8500:8500"
+      - "8600:8600/tcp"
+      - "8600:8600/udp"
+    networks:
+      - service-registry
+
+  consul-client:
+    image: consul
+    container_name: consul-client
+    command: agent
+    volumes:
+      - "./consul-client-config.json:/consul/config/client.json:ro"
+    networks:
+      - service-registry
+
+networks:
+  service-registry: {}
